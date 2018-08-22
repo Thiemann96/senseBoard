@@ -1,8 +1,10 @@
 FROM nikolaik/python-nodejs
 
 WORKDIR /app
+RUN mkdir -p /app/ressources
+RUN mkdir -p /app/data
 
-RUN pip3 install requests matplotlib geopy
+RUN pip3 install requests matplotlib geopy pillow
 
 COPY package.json /app/package.json
 COPY package-lock.json /app/package-lock.json
