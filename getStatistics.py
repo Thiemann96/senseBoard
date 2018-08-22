@@ -7,6 +7,9 @@ import csv
 if(len(sys.argv)>1):
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
+    from geopy.geocoders import Nominatim
+    geolocator = Nominatim(user_agent="Story_Dashboard_senseBox")
+
 import base64
 
 import requests
@@ -26,6 +29,42 @@ import glob
     #     print (str)
 ####################
 today = datetime.datetime.now().replace(microsecond=0).isoformat()
+analyseStrings=[]
+
+
+### Function that takes 2 arrays recognizes values with the same day and averages that day 
+### returns 2 arrays , one array with all the days and one with the averaged value of that day 
+
+def daily_mean(dates,value):
+    result = list(zip(dates,value))   
+    result2 = dict(result) 
+    dateArray=[]
+    aktuellerTag = 0
+    counter = -1
+    # print(result2)
+    for key in result2:
+            wert = result2[key]
+            datum = key
+            if datum[8:10] == '00':
+                aktuellerTag = datum[:8]
+                dateArray.append([datum[:8],wert])
+                counter = counter + 1 
+            if datum[:8] == aktuellerTag:
+                dateArray[counter].append(float(wert))
+    for item in dateArray:
+        ## Duplicate gets removed 
+        del item[1]
+    #     del item[0]
+    averageArray = []
+    datesArray = []
+    for item in dateArray:
+        sum = 0
+        for items in item[:1]:
+            datesArray.append(items)
+        for items in item[1:]:
+            sum = sum + items
+        averageArray.append(sum/(len(item)-1))
+    return(datesArray,averageArray)
 
 def distance_calc(lat1,lon1,lat2,lon2):
     # approximate radius of earth in km
@@ -83,11 +122,12 @@ def nearestID(lat,lon):
         lone = float(data[2][i])
         if distance>distance_calc(float(lat),float(lon),late,lone):
             distance = distance_calc(float(lat),float(lon),late,lone)
+            latlon = [late,lone]
             nearestID=id
     ## Getting to the right format again
     while not len(nearestID)==5:
         nearestID='0'+nearestID
-    return nearestID
+    return nearestID,distance,latlon
 
 def subtractMonth(today):
     current_month= int(today[5:7])
@@ -137,7 +177,10 @@ def __senseBox__():
 
 #####################################################
 def __DWD__():
-    stationID = nearestID(sys.argv[4],sys.argv[3])
+    id_result  = nearestID(sys.argv[3],sys.argv[4])
+    stationID = id_result[0]
+    distance = id_result [1]
+    latlon = id_result[2]
     phenomenon = sys.argv[2] 
     title=''
     prefix=''
@@ -178,56 +221,94 @@ def __DWD__():
     ##### Read csv and extract data for further plotting
     dates = []
     values = []
+    buffer = 0 
+    if sys.argv[7] == '86400000':
+        buffer = 100
     with open(path+'/'+file, newline='') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar='|')
         for row in reader:
             value = row[3]
             date = row[1]
             if not date == 'MESS_DATUM':
-                if float(date)>=converTime(sys.argv[5]) and float(date)<=converTime(sys.argv[6]):  
-                    dates.append(date[6:8])          
+                if float(date)>=converTime(sys.argv[5]) and float(date)<converTime(sys.argv[6])+buffer:  
+                    dates.append(date)          
                     if not value == 'TT_TU':
                         value_new = float(value.strip())
                         values.append(value_new)
     # delete files that were downloaded 
     os.remove(path+'/'+file)
     os.rmdir(path)
-    return values 
+    return (dates,values,distance,latlon) 
 
 def __main__():
     bytes = BytesIO()
     senseBoxData = __senseBox__()[0]
+    senseBoxDatum = __senseBox__()[1]
     dates = __senseBox__()[1]
-    ticks = range(0,len(dates),floor(len(senseBoxData)/10))
-    labels=[]
-    for tick in ticks:
-        labels.append(dates[tick][5:10])
+    # ticks = range(0,len(dates),floor(len(senseBoxData)/10))
+    # labels=[]
+    # for tick in ticks:
+    #     labels.append(dates[tick][5:10])
     fig = plt.figure()
-    if sys.argv[2] == 'Temperatur' or sys.argv[2] == 'Luftdruck':   
+    if sys.argv[8]=='true':   
         dwdData = __DWD__()
-        ax = plt.plot(dates,senseBoxData,label="senseBox")
-        bx = plt.plot(dwdData,label="DWD")
+        if sys.argv[7] == '86400000':
+            dwdData = daily_mean(dwdData[0],dwdData[1])
+            del senseBoxDatum[len(senseBoxDatum)-1]
+            del senseBoxData[len(senseBoxData)-1]
+        ax = plt.plot(senseBoxData,label="senseBox")
+        bx = plt.plot(dwdData[1],label="DWD")
+        # print(len(senseBoxDatum),len(dwdData[0]))
+        dates =[]
+        for item in senseBoxDatum:
+            dates.append(converTime(item))
         plt.grid()
         plt.legend()
         plt.xlabel('Datum')
+        plt.xticks([0,floor(len(senseBoxData)/4),floor(len(senseBoxData)/2),floor(len(senseBoxData)/1.333),len(senseBoxData)-1],[senseBoxDatum[0][:10],senseBoxDatum[floor(len(senseBoxData)/4)][:10],senseBoxDatum[floor(len(senseBoxData)/2)][:10],senseBoxDatum[floor(len(senseBoxData)/1.333)][:10],senseBoxDatum[floor(len(senseBoxData)-1)][:10]])
         plt.ylabel(sys.argv[2])
-        plt.xticks(ticks,labels)
+        # plt.xticks(ticks,labels)
         plt.savefig(bytes,format='jpg')
     else:
         plt.plot(senseBoxData)
+        plt.xticks([0,floor(len(senseBoxData)/4),floor(len(senseBoxData)/2),floor(len(senseBoxData)/1.333),len(senseBoxData)-1],[senseBoxDatum[0][:10],senseBoxDatum[floor(len(senseBoxData)/4)][:10],senseBoxDatum[floor(len(senseBoxData)/2)][:10],senseBoxDatum[floor(len(senseBoxData)/1.333)][:10],senseBoxDatum[floor(len(senseBoxData)-1)][:10]])
         plt.grid()
         plt.xlabel('Datum')
         plt.ylabel(sys.argv[2])
-        plt.xticks(ticks,labels)
+        # plt.xticks(ticks,labels)
         plt.savefig(bytes,format='jpg')
     bytes.seek(0)
     encodedimg = base64.b64encode(bytes.read())
     print(encodedimg)
-    
-    return
-if len(sys.argv)>1:
-    __main__()
+    analyseStrings.append("Maximalwert senseBox  "+ str(round(max(senseBoxData),1)))
+    analyseStrings.append("Minmalwert senseBox "+ str(round(min(senseBoxData),1)))
+    location_senseBox = geolocator.reverse((sys.argv[3],sys.argv[4]))
+    location_senseBox= location_senseBox.address
+    location_senseBox = location_senseBox.split(',')
+    location_senseBox ="senseBox Standort: " + location_senseBox[1]+location_senseBox[5]+location_senseBox[8]
+    analyseStrings.append(location_senseBox)
 
+
+    if sys.argv[8] =='true':
+        analyseStrings.append("Maximalwert DWD "+str(max(dwdData[1])))
+        analyseStrings.append("Minimalwert DWD "+str(min(dwdData[1])))
+        location_dwd = geolocator.reverse((dwdData[3][0],dwdData[3][1]))
+        location_dwd = location_dwd.address
+        location_dwd = location_dwd.split(',')
+        location_dwd = "DWD Station Standort: " +location_dwd[0]+location_dwd[3]+location_dwd[6]
+        analyseStrings.append(location_dwd)
+        analyseStrings.append("Distanz zur DWD Station :"+str(dwdData[2])+" km")
+
+    print(analyseStrings)
+    return
+
+if len(sys.argv)>1:
+    try:
+        __main__()
+
+    except Exception as identifier:
+        print("Error:"+str(identifier))
+    # __analyse__()
 ###################################
 
 
