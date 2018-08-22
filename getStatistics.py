@@ -93,7 +93,7 @@ def nearestID(lat,lon):
         title='TU'
     if(title=='Luftdruck'):
         title='P0'
-    filename='./ressources/stationen'+title+'.csv'
+    filename='/app/ressources/stationen'+title+'.csv'
     f = open(filename,'rb')
     reader = csv.reader(f,delimiter=',')
     ids = []
@@ -194,7 +194,7 @@ def __DWD__():
         prefix='P0'
         title = '/pressure'
     ## Bauen des Paths 
-    path = "./data/"+stationID+"_"+prefix
+    path = "/app/data/"+stationID+"_"+prefix
     if not os.path.exists(path):
         os.mkdir(path)
         #### Logging in to the ftp - server ######
@@ -212,7 +212,7 @@ def __DWD__():
         #### Unzip the just downloaded file to ressources/
     zip_ref = zipfile.ZipFile(filename, 'r')
     zip_ref.extractall(path)
-    os.remove('./'+filename)
+    os.remove('/app/'+filename)
     zip_ref.close()
     ####  fetch the correct file 
     onlyfiles = [f for f in os.listdir(path) if isfile(join(path, f))]
