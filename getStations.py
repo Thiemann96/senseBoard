@@ -3,7 +3,7 @@ import os
 import csv
 def __main__():
     title = sys.argv[1]
-    filename='/home/eric/Documents/Bachelorarbeit/senseboard_backend/senseBoard/ressources/stationen'+title+'.csv'
+    filename='/app/ressources/stationen'+title+'.csv'
     f = open(filename,'rb')
     reader = csv.reader(f,delimiter=',')
     ids = []
