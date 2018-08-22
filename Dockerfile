@@ -2,8 +2,6 @@ FROM nikolaik/python-nodejs
 
 WORKDIR /app
 
-ENV DISPLAY=:0
-
 RUN pip3 install requests matplotlib geopy
 
 COPY package.json /app/package.json

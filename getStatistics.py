@@ -5,6 +5,9 @@ import zipfile
 from ftplib import FTP
 import csv
 if(len(sys.argv)>1):
+    # https://stackoverflow.com/questions/2801882/generating-a-png-with-matplotlib-when-display-is-undefined
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
     from geopy.geocoders import Nominatim
