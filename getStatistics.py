@@ -5,6 +5,9 @@ import zipfile
 from ftplib import FTP
 import csv
 if(len(sys.argv)>1):
+    # https://stackoverflow.com/questions/2801882/generating-a-png-with-matplotlib-when-display-is-undefined
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
     from geopy.geocoders import Nominatim
@@ -90,7 +93,7 @@ def nearestID(lat,lon):
         title='TU'
     if(title=='Luftdruck'):
         title='P0'
-    filename='/home/eric/Documents/Bachelorarbeit/senseboard_backend/senseBoard/ressources/stationen'+title+'.csv'
+    filename='/app/ressources/stationen'+title+'.csv'
     f = open(filename,'rb')
     reader = csv.reader(f,delimiter=',')
     ids = []
@@ -191,7 +194,7 @@ def __DWD__():
         prefix='P0'
         title = '/pressure'
     ## Bauen des Paths 
-    path = "/home/eric/Documents/Bachelorarbeit/senseboard_backend/senseBoard/data/"+stationID+"_"+prefix
+    path = "/app/data/"+stationID+"_"+prefix
     if not os.path.exists(path):
         os.mkdir(path)
         #### Logging in to the ftp - server ######
@@ -209,7 +212,7 @@ def __DWD__():
         #### Unzip the just downloaded file to ressources/
     zip_ref = zipfile.ZipFile(filename, 'r')
     zip_ref.extractall(path)
-    os.remove('/home/eric/Documents/Bachelorarbeit/senseboard_backend/senseBoard/'+filename)
+    os.remove('/app/'+filename)
     zip_ref.close()
     ####  fetch the correct file 
     onlyfiles = [f for f in os.listdir(path) if isfile(join(path, f))]
